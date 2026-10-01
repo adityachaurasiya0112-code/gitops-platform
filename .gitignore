@@ -1,0 +1,6 @@
+.env
+*.pem
+*.tfstate*
+.terraform/
+kubeconfig*
+__pycache__/
