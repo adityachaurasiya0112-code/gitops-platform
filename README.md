@@ -21,14 +21,40 @@ EKS charges for the control plane even when idle. To keep cloud cost near zero, 
 - Stop and start of the server: k3s, ArgoCD and the app came back on their own
 
 ## Screenshots
+
+### 1. ArgoCD applications
 ![ArgoCD apps synced and healthy](docs/argocd-synced.png)
+
+Terminal output from the k3s server. Both ArgoCD applications, `gitops-app` and `monitoring`, are Synced and Healthy, which means the cluster matches what is in Git. The `monitoring` app briefly showed OutOfSync right after I changed its config in Git, and then synced on its own.
+
+### 2. App running on the cluster
 ![App running via ArgoCD](docs/app-live.png)
+
+The Flask app deployed by ArgoCD answers on the server through a NodePort service and returns its version (v1).
+
+### 3. Request counter in Grafana
 ![App requests in Grafana](docs/grafana-requests.png)
+
+`app_requests_total` from the app's /metrics endpoint, scraped by Prometheus and shown per pod. There are two lines because the Deployment runs two replicas.
+
+### 4. Request rate in Grafana
 ![Request rate in Grafana](docs/grafana-rate.png)
+
+`rate(app_requests_total[...])` shows requests per second for each pod, so traffic spikes are easy to see.
+
+### 5. Monitoring stack
 ![Monitoring pods running](docs/monitoring-pods.png)
+
+All monitoring pods are Running (Prometheus, Alertmanager, Grafana, operator, kube-state-metrics, node-exporter), and the `gitops-app` ServiceMonitor exists so Prometheus knows what to scrape. Grafana restarted twice during its first start because the 4 GB server was under memory pressure.
 
 ## Monitoring
 A ServiceMonitor makes Prometheus scrape the app's /metrics endpoint, and Grafana shows the request counter and request rate per pod.
+
+## Problems I faced
+- GitHub rejected my first push because my token had no `workflow` scope. I created a new token with `repo` and `workflow` and removed the old saved login.
+- On my Windows machine `docker` pointed to a broken file, so I used `docker.exe`.
+- Grafana restarted after its liveness probe failed while the node was short on memory. I checked pod events and `kubectl top` to find this.
+- I chose k3s over EKS to avoid control-plane cost.
 
 ## Rebuild the platform
 On a fresh Ubuntu server, download and run the setup script:
