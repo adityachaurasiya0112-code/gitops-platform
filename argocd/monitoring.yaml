@@ -12,6 +12,9 @@ spec:
     helm:
       values: |
         grafana:
+          service:
+            type: NodePort
+            nodePort: 30300
           admin:
             existingSecret: grafana-admin
             userKey: admin-user
@@ -59,3 +62,4 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
