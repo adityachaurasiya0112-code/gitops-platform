@@ -50,13 +50,19 @@ All monitoring pods are Running (Prometheus, Alertmanager, Grafana, operator, ku
 ## Monitoring
 A ServiceMonitor makes Prometheus scrape the app's /metrics endpoint, and Grafana shows the request counter and request rate per pod.
 
-## Problems I faced
-- GitHub rejected my first push because my token had no `workflow` scope. I created a new token with `repo` and `workflow` and removed the old saved login.
-- On my Windows machine `docker` pointed to a broken file, so I used `docker.exe`.
-- Grafana restarted after its liveness probe failed while the node was short on memory. I checked pod events and `kubectl top` to find this.
-- I chose k3s over EKS to avoid control-plane cost.
+## Design decisions
+- k3s on a single EC2 instance instead of EKS, to avoid the EKS control-plane cost while keeping the same Kubernetes manifests and ArgoCD workflow.
+- GitOps: CI only builds and pushes the image. Deployments happen only through Git, with ArgoCD automated sync, prune and self-heal.
+- Image tags use the commit SHA instead of latest, so every deployment can be traced and rolled back with git revert.
+- Secrets are not stored in Git. The Grafana admin password lives in a Kubernetes Secret created on the cluster.
+- The server is disposable: everything needed to recreate it is in this repository (setup/setup.sh and the ArgoCD applications).
+- Resource requests and limits are set on the app and on the monitoring stack, and Prometheus keeps only 3 days of data, to fit a 4 GB node.
 
-## Rebuild the platform
+## Known limitations
+- Single node, so there is no high availability.
+- The image tag in k8s/deployment.yaml is updated by hand. Next step is to let the CI pipeline update it automatically.
+- Grafana is exposed over plain HTTP on a NodePort, limited to my IP by the security group. It is for demo use and should sit behind an ingress with TLS in a real setup.
+- Alerting (Alertmanager to Slack) is not configured yet.## Rebuild the platform
 On a fresh Ubuntu server, download and run the setup script:
 
     curl -fsSLO https://raw.githubusercontent.com/adityachaurasiya0112-code/gitops-platform/main/setup/setup.sh
