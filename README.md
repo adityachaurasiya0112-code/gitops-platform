@@ -62,7 +62,9 @@ A ServiceMonitor makes Prometheus scrape the app's /metrics endpoint, and Grafan
 - Single node, so there is no high availability.
 - The image tag in k8s/deployment.yaml is updated by hand. Next step is to let the CI pipeline update it automatically.
 - Grafana is exposed over plain HTTP on a NodePort, limited to my IP by the security group. It is for demo use and should sit behind an ingress with TLS in a real setup.
-- Alerting (Alertmanager to Slack) is not configured yet.## Rebuild the platform
+- Alerting (Alertmanager to Slack) is not configured yet.
+
+## Rebuild the platform
 On a fresh Ubuntu server, download and run the setup script:
 
     curl -fsSLO https://raw.githubusercontent.com/adityachaurasiya0112-code/gitops-platform/main/setup/setup.sh
