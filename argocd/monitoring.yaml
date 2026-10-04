@@ -39,12 +39,34 @@ spec:
                 memory: 800Mi
         alertmanager:
           alertmanagerSpec:
+            secrets:
+              - alertmanager-slack
             resources:
               requests:
                 cpu: 10m
                 memory: 32Mi
               limits:
                 memory: 100Mi
+          config:
+            global:
+              resolve_timeout: 5m
+            route:
+              receiver: "null"
+              group_by: ["alertname", "namespace"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+              routes:
+                - receiver: slack
+                  matchers:
+                    - notify = "slack"
+            receivers:
+              - name: "null"
+              - name: slack
+                slack_configs:
+                  - api_url_file: /etc/alertmanager/secrets/alertmanager-slack/url
+                    channel: "#alerts"
+                    send_resolved: true
         kubeEtcd:
           enabled: false
         kubeControllerManager:
@@ -62,4 +84,3 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
-

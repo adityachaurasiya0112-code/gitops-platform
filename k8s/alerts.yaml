@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gitops-app-alerts
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: gitops-app
+      rules:
+        - alert: GitopsAppDown
+          expr: kube_deployment_status_replicas_available{namespace="default",deployment="gitops-app"} < 1
+          for: 1m
+          labels:
+            severity: critical
+            notify: slack
+          annotations:
+            summary: "gitops-app has no available pods"
+            description: "The gitops-app Deployment has had zero available replicas for more than 1 minute."
+        - alert: GitopsAppDegraded
+          expr: kube_deployment_status_replicas_available{namespace="default",deployment="gitops-app"} < kube_deployment_spec_replicas{namespace="default",deployment="gitops-app"}
+          for: 2m
+          labels:
+            severity: warning
+            notify: slack
+          annotations:
+            summary: "gitops-app is running fewer pods than requested"
+            description: "The gitops-app Deployment has had fewer available replicas than desired for more than 2 minutes."
