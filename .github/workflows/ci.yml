@@ -18,7 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -52,3 +52,23 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Update image tag in the Kubernetes manifest
+        if: github.event_name == 'push'
+        run: |
+          sed -i "s|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|" k8s/deployment.yaml
+          grep "image:" k8s/deployment.yaml
+
+      - name: Commit the new tag so ArgoCD can deploy it
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "Image tag already up to date"
+            exit 0
+          fi
+          git add k8s/deployment.yaml
+          git commit -m "ci: deploy image ${{ github.sha }} [skip ci]"
+          git pull --rebase origin main
+          git push origin main
