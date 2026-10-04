@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: gitops-app
-          image: ghcr.io/adityachaurasiya0112-code/gitops-platform:b79fee8e1fa54744bd0c00852028f4da806018a5
+          image: ghcr.io/adityachaurasiya0112-code/gitops-platform:31c6de9db84b8dbd42f910b3a71a15c1ce9d70ae
           ports:
             - containerPort: 5000
           env:
