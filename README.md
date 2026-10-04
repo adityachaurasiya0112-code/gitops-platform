@@ -10,6 +10,7 @@ Flow: git push -> GitHub Actions builds image -> image pushed to ghcr.io -> Argo
 - Cluster: k3s on an AWS EC2 Ubuntu server
 - CD: ArgoCD (automated sync, prune and self-heal)
 - Monitoring: Prometheus and Grafana (kube-prometheus-stack, installed through ArgoCD)
+- Alerting: Alertmanager sending alerts to Slack
 
 ## Why k3s and not EKS
 EKS charges for the control plane even when idle. To keep cloud cost near zero, this project runs k3s on a single EC2 instance that is stopped when not in use. The same manifests and ArgoCD setup work on EKS.
@@ -47,14 +48,19 @@ The Flask app deployed by ArgoCD answers on the server through a NodePort servic
 
 All monitoring pods are Running (Prometheus, Alertmanager, Grafana, operator, kube-state-metrics, node-exporter), and the `gitops-app` ServiceMonitor exists so Prometheus knows what to scrape. Grafana restarted twice during its first start because the 4 GB server was under memory pressure.
 
-## Monitoring
-A ServiceMonitor makes Prometheus scrape the app's /metrics endpoint, and Grafana shows the request counter and request rate per pod.
+### 6. Slack alert
+![Alertmanager alert in Slack](docs/slack-alert.png)
+
+Alertmanager sends alerts to a Slack channel through an incoming webhook. This is a test alert. The same route also carries the GitopsAppDown and GitopsAppDegraded rules, which fire when the app has no available pods or fewer pods than requested.
+
+## Monitoring and alerting
+A ServiceMonitor makes Prometheus scrape the app's /metrics endpoint, and Grafana shows the request counter and request rate per pod. A PrometheusRule (k8s/alerts.yaml) defines two alerts for the app. Alertmanager routes alerts labelled `notify=slack` to a Slack channel.
 
 ## Design decisions
 - k3s on a single EC2 instance instead of EKS, to avoid the EKS control-plane cost while keeping the same Kubernetes manifests and ArgoCD workflow.
 - GitOps: CI only builds and pushes the image. Deployments happen only through Git, with ArgoCD automated sync, prune and self-heal.
 - Image tags use the commit SHA instead of latest, so every deployment can be traced and rolled back with git revert.
-- Secrets are not stored in Git. The Grafana admin password lives in a Kubernetes Secret created on the cluster.
+- Secrets are not stored in Git. The Grafana admin password and the Slack webhook URL live in Kubernetes Secrets created on the cluster.
 - The server is disposable: everything needed to recreate it is in this repository (setup/setup.sh and the ArgoCD applications).
 - Resource requests and limits are set on the app and on the monitoring stack, and Prometheus keeps only 3 days of data, to fit a 4 GB node.
 
@@ -62,7 +68,7 @@ A ServiceMonitor makes Prometheus scrape the app's /metrics endpoint, and Grafan
 - Single node, so there is no high availability.
 - The image tag in k8s/deployment.yaml is updated by hand. Next step is to let the CI pipeline update it automatically.
 - Grafana is exposed over plain HTTP on a NodePort, limited to my IP by the security group. It is for demo use and should sit behind an ingress with TLS in a real setup.
-- Alerting (Alertmanager to Slack) is not configured yet.
+- The two Kubernetes Secrets (Grafana admin password and Slack webhook) are created by hand and are not yet part of setup.sh.
 
 ## Rebuild the platform
 On a fresh Ubuntu server, download and run the setup script:
@@ -78,6 +84,6 @@ On a fresh Ubuntu server, download and run the setup script:
 - [x] Self-heal, version change via Git, rollback test
 - [x] setup.sh to rebuild the server quickly
 - [x] Prometheus and Grafana monitoring
-- [ ] Slack alerts via Alertmanager
+- [x] Slack alerts via Alertmanager
 - [ ] CI updates the image tag in k8s/ automatically
 - [ ] Architecture diagram
